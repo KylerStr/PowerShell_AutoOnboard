@@ -1,0 +1,14 @@
+{
+    "SQLData": {
+        "ServerName": "Example.domain",
+        "DatabaseName": "PSAO-DB",
+        "OnboardingTable": "PSAO_Onboarding",
+        "ConnectionStyle": "Integrated",
+        "UserName": "",
+        "Password": ""
+    },
+    "CompanyData" : {
+        "CompanyName": "Example Industries",
+        "CompanyCopyright": ""
+    }
+}
