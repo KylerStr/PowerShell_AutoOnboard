@@ -1,0 +1,47 @@
+#This script preforms the installation of the PowerShell Automatic Onboarding backend.
+#Function for setting SQL connection information
+#First, we need to get information on where SQL is located
+Write-Host "Welcome to the PowerShell Automatic Onboarding installation script." -ForegroundColor Green
+Write-Host "This script will guide you through the installation process." -ForegroundColor Cyan
+Function Set-SQLConnectionInfo {
+    $SQLServer = Read-Host "Please enter the SQL Server name (e.g., localhost or server.domain.com)"
+    $SQLDatabase = Read-Host "Please enter the SQL Database name (e.g., PSAO)"
+    Write-Host "Please enter the SQL username (leave blank for integrated security)" -ForegroundColor Yellow
+    $SQLUsername = Read-Host "SQL Username"
+    $SQLPassword = Read-Host "Please enter the SQL password (leave blank for integrated security)" -AsSecureString
+    # Verify the SQL connection
+    If ($SQLUsername -eq $null -or $SQLUsername -eq '') {
+        $SQLConnectionString = "Server=$SQLServer;Database=$SQLDatabase;Integrated Security=True;"
+    }
+    else {
+        $SQLConnectionString = "Server=$SQLServer;Database=$SQLDatabase;User ID=$SQLUsername;Password=$(ConvertFrom-SecureString $SQLPassword -AsPlainText);"
+    }
+    # Test the SQL connection
+    $ConnectionSuccess = $false
+    Write-Host "Testing SQL connection..." -ForegroundColor Yellow
+    Try {
+        $SqlConnection = New-Object System.Data.SqlClient.SqlConnection
+        $SqlConnection.ConnectionString = $SQLConnectionString
+        $SqlConnection.Open()
+        Write-Host "SQL connection successful." -ForegroundColor Green
+        $SqlConnection.Close()
+        $ConnectionSuccess = $true
+    }
+    Catch {
+        Write-Host "Failed to connect to SQL Server. Please check your connection details." -ForegroundColor Red
+    }
+    If ($ConnectionSuccess -eq $false) {
+        Write-Host "Connection failed! Please try again." -ForegroundColor Red
+    }
+    return [PSCustomObject]@{
+        SQLServer           = $SQLServer
+        SQLDatabase         = $SQLDatabase
+        SQLUsername         = $SQLUsername
+        SQLPassword         = $SQLPassword
+        SQLConnectionString = $SQLConnectionString
+        ConnectionSuccess   = $ConnectionSuccess
+    }
+}
+Do {
+    $SQLInfo = Set-SQLConnectionInfo
+} Until ($SQLInfo.ConnectionSuccess -eq $true)
