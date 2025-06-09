@@ -1,6 +1,6 @@
 #This script preforms the installation of the PowerShell Automatic Onboarding backend.
 #Function for setting SQL connection information
-#First, we need to get information on where SQL is located
+#First, we need to get information on where the SQL DB is located
 Write-Host "Welcome to the PowerShell Automatic Onboarding installation script." -ForegroundColor Green
 Write-Host "This script will guide you through the installation process." -ForegroundColor Cyan
 Function Set-SQLConnectionInfo {
@@ -45,3 +45,59 @@ Function Set-SQLConnectionInfo {
 Do {
     $SQLInfo = Set-SQLConnectionInfo
 } Until ($SQLInfo.ConnectionSuccess -eq $true)
+# Now, prompt for general configuration settings
+$CompanyName = Read-Host "Please enter the company name (e.g., My Company)"
+#Set general configuration settings
+$BrandColor = "#0078D4" # Default to a blue color
+# Now, we will create the configuration file
+$ConfigFilePath = "c:\ProgramFiles\PSAO\Config\Configuration.Json"
+$ConfigDirectory = Split-Path -Path $ConfigFilePath -Parent
+#Determine notification system
+#Right now we only support email notifications, but we can add more later
+#Create a blank email configuration object
+$EmailConfig = [PSCustomObject]@{
+    SMTPServer   = ""
+    SMTPPort     = 587
+    UseSSL       = $true
+    FromAddress  = ""
+    AuthRequired = $false
+    Username     = ""
+    Password     = ""
+}
+# Ensure the directory exists
+Try {
+    If (!(Test-Path -Path $ConfigDirectory)) {
+        New-Item -ItemType Directory -Path $ConfigDirectory -Force | Out-Null
+    }
+}
+Catch {
+    Write-Host "Failed to create configuration directory: $ConfigDirectory" -ForegroundColor Red
+    Write-Output "Error: $($_.Exception.Message)"
+    PAUSE
+    Exit 1
+}
+# Create the configuration object
+$Configuration = [PSCustomObject]@{
+    SQLData = [PSCustomObject]@{
+        ServerName     = $SQLInfo.SQLServer
+        DatabaseName   = $SQLInfo.SQLDatabase
+        Username       = $SQLInfo.SQLUsername
+        Password       = $SQLInfo.SQLPassword
+        ConnectionStyle = If ($SQLInfo.SQLUsername -eq '') { 'Integrated' } else { 'SQLAuth' }
+    }
+    GeneralSettings = [PSCustomObject]@{
+        CompanyName  = $CompanyName
+        BrandColor   = $BrandColor
+    }
+    EmailSettings = $EmailConfig
+}
+Try {
+    $Configuration | ConvertTo-Json -Depth 10 | Set-Content -Path $ConfigFilePath -Force
+    Write-Host "Configuration file created successfully at $ConfigFilePath" -ForegroundColor Green
+}
+Catch {
+    Write-Host "Failed to create configuration file: $ConfigFilePath" -ForegroundColor Red
+    Write-Output "Error: $($_.Exception.Message)"
+    PAUSE
+    Exit 1
+}
