@@ -3,7 +3,7 @@ function New-PSAOSystemLog {
         [Parameter(Mandatory = $true)]
         [string]$Message,
         [Parameter(Mandatory = $false)]
-        [string]$LogLevel = "Info"
+        [string]$LogLevel = 'Info'
     )
     <#
         .SYNOPSIS
@@ -17,19 +17,30 @@ function New-PSAOSystemLog {
         .Example
         New-PSAOLog -Message "This is an informational message."
     #>
-    #TODO Make this recursive so it can handle if it fails to write to the log file. It will make a new log file with an interated name.
-    Try {
-        $LogFilePath = "C:\Program Files\PSAO\Logs\PSAOSystem.log"
-        If (!(Test-Path -Path $LogFilePath)) {
-            New-Item -ItemType File -Path $LogFilePath -Force | Out-Null
+    $i = 0
+    Do {
+        $i++
+        Try {
+            $LogFilePath = "C:\Program Files\PSAO\Logs\PSAOSystem-$i.log"
+            If (!(Test-Path -Path $LogFilePath)) {
+                New-Item -ItemType File -Path $LogFilePath -Force | Out-Null
+            }
+            $Timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+            $LogEntry = "$Timestamp [$LogLevel] $Message"
+            Try {
+                Add-Content -Path $LogFilePath -Value $LogEntry
+                Write-Host $Message
+                $LogSuccess = $true
+            }
+            Catch {
+                $LogSuccess = $false
+            }
         }
-        $Timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-        $LogEntry = "$Timestamp [$LogLevel] $Message"
-        Add-Content -Path $LogFilePath -Value $LogEntry
+        Catch {
+            Write-Host "Failed to write to log file: $($_.Exception.Message)" -ForegroundColor Red
+        }
     }
-    Catch {
-        Write-Host "Failed to write to log file: $($_.Exception.Message)" -ForegroundColor Red
-    }
+    While ($LogSuccess -eq $False -and $i -lt 5)
     
 }
 Function Get-PSAOSQLTable {
@@ -52,7 +63,7 @@ Function Get-PSAOSQLTable {
         $SqlConnection.ConnectionString = "Server = $($PSAOConfiguration.SQLData.ServerName); Database = $($PSAOConfiguration.SQLData.DatabaseName); Integrated Security = True;"
     }
     Catch {
-        Throw "Could not connect to SQL Server. Please check your connection string and ensure the server is reachable."
+        Throw 'Could not connect to SQL Server. Please check your connection string and ensure the server is reachable.'
     }
     Try {
         $SqlCmd = New-Object System.Data.SqlClient.SqlCommand
@@ -93,7 +104,7 @@ Function New-PSAOSQLCommand {
         $SqlConnection.ConnectionString = "Server = $($PSAOConfiguration.SQLData.ServerName); Database = $($PSAOConfiguration.SQLData.DatabaseName); Integrated Security = True;"
     }
     Catch {
-        Throw "Could not connect to SQL Server. Please check your connection string and ensure the server is reachable."
+        Throw 'Could not connect to SQL Server. Please check your connection string and ensure the server is reachable.'
     }
     Try {
         $SqlCmd = New-Object System.Data.SqlClient.SqlCommand
@@ -110,4 +121,50 @@ Function New-PSAOSQLCommand {
         Throw "Error executing SQL command: $($_.Exception.Message)"
     } 
     Return $DataSet.Tables[0]
+}
+Function New-Password {
+    <#
+        .SYNOPSIS
+        Generates a new random password.
+        .Description
+        This function generates a new random password with a specified length and complexity.
+        .Parameter Length
+        The length of the password to generate. Default is 12 characters.
+        .Example
+        New-Password -Length 16
+    #>
+    # Define three arrays of words
+    $WordArray1 = @('Blue', 'Red', 'Green', 'Yellow', 'Purple', 'Orange', 'Pink', 'Black', 'White', 'Gray', 'Fast', 'Smart', 'Strong', 'Happy')
+    $WordArray2 = @('Car', 'House', 'Tree', 'Computer', 'Phone', 'Book', 'Table', 'Chair', 'Lamp', 'Window', 'Keyboard', 'Plane', 'Train', 'Boat', 'Bicycle', 'Motorcycle')
+    $WordArray3 = @('Dog', 'Cat', 'Bird', 'Fish', 'Mouse', 'Rabbit', 'Hamster', 'Lizard', 'Snake', 'Frog', 'Turtle', 'Horse', 'Cow', 'Pig', 'Sheep')
+    $SymbolArray = @('!', '@', '#', '$', '%', '^', '&', '*',  '?')
+    #Now, generate a password using a random selection from each array
+    $Password = "$((Get-Random -InputObject $WordArray1))$((Get-Random -InputObject $WordArray2))$((Get-Random -InputObject $WordArray3))$((Get-Random -InputObject $SymbolArray))"
+    # Now, choose a random character to replace with leet speak
+    #Define array, which contains leet speak mappings. Index 0 is the character to replace, index 1 is the leet speak equivalent
+    $LeetMapping = @(
+        'a@',
+        'e3',
+        'i1',
+        'o0',
+        's$',
+        't7'
+    )
+    #Get a random mapping from the leet speak array
+    $Replacement = Get-Random -InputObject $LeetMapping
+    # Replace the character in the password with its leet speak equivalent
+    $Password = $Password.Replace("$($Replacement[0])", "$($Replacement[1])")
+    # Finally, add a random number to the end of the password
+    $Password = "$Password$(Get-Random -Minimum 0 -Maximum 100)"
+    #Verify the password length is >= 12 characters
+    If ($Password.Length -lt 12) {
+        $CharsToAdd = 12 - $Password.Length
+        For ($i = 0; $i -lt $CharsToAdd; $i++) {
+            # Generate a random character
+            $RandomChar = [char](Get-Random -Minimum 33 -Maximum 126) 
+            $Password += $RandomChar
+        }
+    }
+    # Return the generated password
+    Return $Password
 }
