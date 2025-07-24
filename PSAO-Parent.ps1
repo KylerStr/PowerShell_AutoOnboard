@@ -13,3 +13,18 @@ if (-Not (Test-Path -Path $ConfigFilePath)) {
 # Load the configuration file
 $PSAOConfiguration = Get-Content -Path $ConfigFilePath | ConvertFrom-Json
 # Verify connection to SQL Server
+$SQLConnectionString = "Server=$($PSAOConfiguration.SQLData.ServerName);Database=$($PSAOConfiguration.SQLData.DatabaseName);"
+if ($PSAOConfiguration.SQLData.ConnectionStyle -eq 'SQLAuth') {
+    $SQLConnectionString += "User Id=$($PSAOConfiguration.SQLData.Username);Password=$($PSAOConfiguration.SQLData.Password);"
+} else {
+    $SQLConnectionString += "Integrated Security=True;"
+}
+Try {
+    $SqlConnection = New-Object System.Data.SqlClient.SqlConnection($SQLConnectionString)
+    $SqlConnection.Open()
+    $SqlConnection.Close()
+    New-PSAOSystemLog -Message "Successfully connected to SQL Server at $($PSAOConfiguration.SQLData.ServerName)." -LogLevel "Info"
+} Catch {
+    New-PSAOSystemLog -Message "Failed to connect to SQL Server at $($PSAOConfiguration.SQLData.ServerName). Error: $($_.Exception.Message)" -LogLevel "Error"
+    exit 1
+}
