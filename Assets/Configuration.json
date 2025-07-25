@@ -10,5 +10,11 @@
     "CompanyData" : {
         "CompanyName": "Example Industries",
         "CompanyCopyright": ""
+    },
+    "GeneralSettings": {
+        "EnableLogging": true,
+        "JobQueueSize": 30,
+        "JobQueueTimeout": 120,
+        "JobHistoryRetentionDays": 30
     }
 }

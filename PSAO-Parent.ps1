@@ -28,3 +28,24 @@ Try {
     New-PSAOSystemLog -Message "Failed to connect to SQL Server at $($PSAOConfiguration.SQLData.ServerName). Error: $($_.Exception.Message)" -LogLevel "Error"
     exit 1
 }
+# Check Job table in SQL Server exists
+$JobTable = Get-PSAOSQLTable -TableName "Jobs" -whereclause "WHERE CurrentStep != 'Cancelled' OR CurrentStep != 'Successful'"
+if ($JobTableExists -eq $null) {
+    New-PSAOSystemLog -Message "Job table does not exist or is empty. Please ensure the Jobs table is created and populated." -LogLevel "Error"
+    exit 1
+} else {
+    New-PSAOSystemLog -Message "Job table exists and has data." -LogLevel "Info"
+}
+New-PSAOSystemLog -Message "Checking for running jobs in the Job table." -LogLevel "Info"
+If ($JobTable.Count -ge 1) {
+    # Check each job in the Job table, see if its still running
+    foreach ($Job in $JobTable) {
+        # Check Job status via Get-Job
+        $JobStatus = Get-Job -Id $Job.Id
+        if ($JobStatus.State -eq 'Running') {
+            New-PSAOSystemLog -Message "Job $($Job.Id) is still running." -LogLevel "Info"
+        } else {
+            New-PSAOSystemLog -Message "Job $($Job.Id) is not running. Marking complete." -LogLevel "Info"
+        }
+    }
+}

@@ -46,7 +46,8 @@ function New-PSAOSystemLog {
 Function Get-PSAOSQLTable {
     Param (
         [Parameter(Mandatory = $true)]
-        [string]$TableName
+        [string]$TableName,
+        [String]$WhereClause = $null
     )
     <#
         .SYNOPSIS
@@ -67,7 +68,7 @@ Function Get-PSAOSQLTable {
     }
     Try {
         $SqlCmd = New-Object System.Data.SqlClient.SqlCommand
-        $SqlCmd.CommandText = "Select * from $TableName WHERE CurrentStep != 'Cancelled' OR CurrentStep != 'Successful'"
+        $SqlCmd.CommandText = "Select * from $TableName $($WhereClause)"
         $SqlCmd.Connection = $SqlConnection 
         $SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
         $SqlAdapter.SelectCommand = $SqlCmd 
